@@ -76,7 +76,7 @@ function require_login()
 
     // Save only a local page name; do not accept an external redirect URL.
     $requestedPage = basename($_SERVER['PHP_SELF'] ?? 'index.php');
-    $allowedPages = ['residents.php', 'resident_form.php', 'resident_save.php', 'households.php', 'reports.php', 'officials.php', 'accounts.php'];
+    $allowedPages = ['staff_dashboard.php', 'residents.php', 'resident_form.php', 'resident_save.php', 'households.php', 'household_form.php', 'household_save.php', 'reports.php', 'officials.php', 'accounts.php'];
     if (in_array($requestedPage, $allowedPages, true)) {
         $_SESSION['after_login'] = $requestedPage;
     }
@@ -102,7 +102,7 @@ function require_role($requiredRole)
 function role_home($user = null)
 {
     $user = $user ?? current_user();
-    return (($user['role'] ?? '') === 'staff') ? 'residents.php' : 'user_dashboard.php';
+    return (($user['role'] ?? '') === 'staff') ? 'staff_dashboard.php' : 'user_dashboard.php';
 }
 
 function nav()
@@ -118,6 +118,7 @@ function nav()
             <nav>
                 <a href="index.php">Home</a>
                 <?php if (is_logged_in() && ($user['role'] ?? '') === 'staff'): ?>
+                    <a href="staff_dashboard.php">Dashboard</a>
                     <a href="residents.php">Residents</a>
                     <a href="resident_form.php">Registration</a>
                     <a href="households.php">Households</a>
@@ -130,7 +131,7 @@ function nav()
                         <button type="submit" class="btn primary">Log out</button>
                     </form>
                 <?php elseif (is_logged_in()): ?>
-                    <a href="user_dashboard.php">My Account</a>
+                    <a href="user_dashboard.php">Dashboard</a>
                     <span class="nav-user">User: <?= e($user['username'] ?? '') ?></span>
                     <form class="nav-logout" action="logout.php" method="post">
                         <input type="hidden" name="csrf" value="<?= e(token()) ?>">

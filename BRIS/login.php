@@ -47,9 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $target = 'user_dashboard.php';
             if ($account['role'] === 'staff') {
-                $allowedTargets = ['residents.php', 'resident_form.php', 'households.php', 'reports.php', 'officials.php', 'accounts.php'];
+                $allowedTargets = ['staff_dashboard.php', 'residents.php', 'resident_form.php', 'households.php', 'household_form.php', 'reports.php', 'officials.php', 'accounts.php'];
                 $requested = $_SESSION['after_login'] ?? '';
-                $target = in_array($requested, $allowedTargets, true) ? $requested : 'residents.php';
+                $target = in_array($requested, $allowedTargets, true) ? $requested : 'staff_dashboard.php';
             }
             unset($_SESSION['after_login']);
             flash('Welcome back, ' . $account['username'] . '.');
