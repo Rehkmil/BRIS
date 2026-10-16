@@ -1,0 +1,24 @@
+BRIS LOGIN / LOGOUT IMPLEMENTATION NOTES
+
+Roles
+- Staff: can access residents, resident registration/edit, households, reports, officials, and Accounts.
+- User / Resident: can access My Account only. A user can see a resident profile after staff links the account to a resident record.
+
+First-time setup
+1. Import database/bris.sql for a new database. For an existing BRIS database that was imported before login was added, import database/add_login_system.sql in phpMyAdmin after selecting bris_db (or use the Import tab).
+2. Visit http://localhost/BRIS/setup_staff.php and create the first staff account. Choose your own username, email, and password. There are no hard-coded default credentials.
+3. Log in at http://localhost/BRIS/login.php.
+4. The first staff account can use Accounts to create additional Staff or User accounts and link a User account to a resident record.
+5. Standard users can self-register at http://localhost/BRIS/register.php. Self-registered accounts are not automatically linked to a resident record.
+6. After the first staff account is created, setup_staff.php is disabled by the app. You can also remove that file from the server.
+
+Security basics included
+- Passwords stored via password_hash() and checked with password_verify().
+- Staff-only routes use server-side role checks.
+- Login, register, account creation, linking, and logout forms use CSRF tokens.
+- The session ID is regenerated at login and logout.
+- Login throttling limits repeated failed attempts in the current session.
+- Database operations use prepared statements.
+
+Important
+This is an educational XAMPP project starter. Test it with the exact PHP/MySQL versions used for your class. Do not use real resident data in a public/production deployment without a proper security review, HTTPS, access-control review, backup plan, logging, and privacy safeguards.

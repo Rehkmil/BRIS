@@ -1,0 +1,29 @@
+REFERENCE ARCHIVE NOTES
+=======================
+Reference file supplied by the user:
+iNetTutor.com-Brgy_System_Free_Source_code.zip
+
+The archive appears to be an older PHP barangay management system (many files are
+from 2013-2017). It includes examples of modules such as:
+- Resident records
+- Households
+- Barangay officials and staff
+- Barangay clearances and permits
+- Blotter records
+- Activity logs and reports
+
+This BRIS project is intentionally organized as a smaller, clearer project for
+learning and capstone prototyping. The reference is used for ideas about the
+kinds of modules a barangay system may have, not as a direct copy of its source.
+
+Possible future modules to add:
+1. Login and role-based access (administrator/staff)
+2. Barangay officials management
+3. Resident document / certificate tracking
+4. Clearance and permit requests
+5. Blotter records with restricted access
+6. Audit trail and database backup
+
+Before implementing those modules, add authentication, authorization, input
+validation, secure file handling, and privacy controls. Blotter and resident
+records may contain sensitive information and should not be visible to everyone.
