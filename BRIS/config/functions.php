@@ -111,10 +111,18 @@ function nav()
     ?>
     <header>
         <div class="wrap nav">
-            <a class="brand" href="index.php">
-                <b>B</b>
-                <span>BRIS<small>Barangay Resident Information System</small></span>
-            </a>
+     <a class="brand" href="index.php">
+    <img
+        class="brand-logo"
+        src="assets/BRISlogo.png"
+        alt="BRIS Logo"
+    >
+
+    <span>
+        BRIS
+        <small>Barangay Resident Information System</small>
+    </span>
+</a>
             <nav>
                 <a href="index.php">Home</a>
                 <?php if (is_logged_in() && ($user['role'] ?? '') === 'staff'): ?>
