@@ -203,7 +203,7 @@ start_page('Create User Account');
 ?>
 <main class="auth-wrap" style="width:min(760px,92%)">
     <section class="auth-card">
-        <div class="auth-mark">B</div>
+        <div class="auth-logo"><img class="auth-logo-img" src="assets/BRISlogo.png" alt="BRIS logo"></div>
         <p class="kicker center">Resident access</p>
         <h1 class="center">Create an account</h1>
         <p class="muted center">

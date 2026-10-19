@@ -64,7 +64,7 @@ start_page('Log In');
 ?>
 <main class="auth-wrap">
     <section class="auth-card">
-        <div class="auth-mark">B</div>
+        <div class="auth-logo"><img class="auth-logo-img" src="assets/BRISlogo.png" alt="BRIS logo"></div>
         <p class="kicker center">Secure account access</p>
         <h1 class="center">Welcome to BRIS</h1>
         <p class="muted center">Log in with your staff or user account.</p>

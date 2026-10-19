@@ -10,7 +10,7 @@ The organization is intentionally conservative: PHP page URLs and SQL filenames 
   - `functions.php` contains shared functions used by many pages: escaping output (`e()`), CSRF tokens, flash messages, current-user/login checks, role checks, navigation, and the common page opening/closing layout.
   - `.htaccess` helps prevent direct web access to configuration files on Apache.
 - `database/` — SQL scripts to create the database or apply the older login-system migration.
-- `assets/` — CSS used by the current PHP website (`assets/style.css`).
+- `assets/` — shared visual assets: `BRISlogo.png` and the responsive stylesheet (`style.css`).
 - `docs/` — project notes and this guide.
 - Root `.php` files — the pages and actions users navigate to.
 
@@ -25,7 +25,7 @@ The organization is intentionally conservative: PHP page URLs and SQL filenames 
 - `household_save.php` — validates household details, checks for a duplicate code, and inserts the new household into MySQL.
 - `reports.php` — summary reports and printing.
 - `officials.php` — officials directory.
-- `login.php`, `logout.php`, `register.php`, `setup_staff.php` — authentication and account setup.
+- `login.php`, `logout.php`, `register.php`, `setup_staff.php` — authentication and account setup. The first-staff setup page is available only while no staff account exists.
 - `accounts.php` — staff account management.
 - `user_dashboard.php` — the standard user's account page.
 

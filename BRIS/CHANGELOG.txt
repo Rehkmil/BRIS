@@ -1,0 +1,20 @@
+BRIS CLEANUP NOTES
+==================
+
+Design
+------
+- Updated the site palette to a clean barangay-green theme with orange accents.
+- Improved spacing, hover states, form focus styles, responsive navigation, and card/table styling.
+- Standardized the site logo filename to assets/BRISlogo.png and used it in the shared navigation, login, registration, and initial staff setup pages.
+
+Code and organization
+---------------------
+- Removed the unused legacy Index.html and root styles.css. The active website is index.php and uses assets/style.css.
+- Repaired setup_staff.php: it now creates the first staff account, validates the input, hashes the password, checks the CSRF token, and closes itself to further setup once a staff account exists.
+- Updated the README and project structure guide to match the cleaned project.
+- Preserved the existing PHP page URLs and database schema.
+
+Validation
+----------
+- All PHP files passed `php -l` syntax checks.
+- This package has not been run against a live MySQL database or tested in a browser. Please import the SQL and test in XAMPP before using real data.

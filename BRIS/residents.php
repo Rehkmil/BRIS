@@ -84,7 +84,7 @@ start_page('Residents');
                 </select>
 
                 <button type="submit" class="btn primary">Search</button>
-                <a class="btn" style="background:#edf1f7" href="residents.php">Reset</a>
+                <a class="btn" style="background:#f3f8f4" href="residents.php">Reset</a>
             </form>
 
             <a class="btn primary" href="resident_form.php">+ Add Resident</a>

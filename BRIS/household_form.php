@@ -40,7 +40,7 @@ start_page('Add Household');
 
             <div class="actions" style="justify-content:flex-start">
                 <button type="submit" class="btn primary">Save Household</button>
-                <a class="btn" style="background:#edf1f7" href="households.php">Cancel</a>
+                <a class="btn" style="background:#f3f8f4" href="households.php">Cancel</a>
             </div>
         </form>
     </div>

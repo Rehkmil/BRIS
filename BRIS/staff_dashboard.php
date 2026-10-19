@@ -92,7 +92,7 @@ start_page('Staff Dashboard');
     .dash-metric {
         padding: 19px;
         background: #fff;
-        border: 1px solid #e5eaf2;
+        border: 1px solid #dfe9e1;
         border-radius: 14px;
         box-shadow: 0 5px 18px #152c5208;
     }
@@ -120,7 +120,7 @@ start_page('Staff Dashboard');
     }
     .dash-panel {
         background: #fff;
-        border: 1px solid #e5eaf2;
+        border: 1px solid #dfe9e1;
         border-radius: 14px;
         padding: 20px;
         min-width: 0;
@@ -144,14 +144,14 @@ start_page('Staff Dashboard');
     .dash-shortcut {
         display: block;
         padding: 14px;
-        border: 1px solid #e5eaf2;
+        border: 1px solid #dfe9e1;
         border-radius: 11px;
         text-decoration: none;
         color: #182338;
     }
     .dash-shortcut:hover {
-        border-color: #2463eb;
-        background: #f7f9ff;
+        border-color: #16804a;
+        background: #fbfdfb;
     }
     .dash-shortcut strong {
         display: block;
@@ -166,8 +166,8 @@ start_page('Staff Dashboard');
         margin-top: 18px;
         padding: 14px;
         border-radius: 10px;
-        background: #edf4ff;
-        color: #415a80;
+        background: #e5f6eb;
+        color: #657568;
         font-size: 13px;
         line-height: 1.6;
     }

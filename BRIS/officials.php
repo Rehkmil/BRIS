@@ -118,17 +118,17 @@ start_page('Barangay Officials');
 
 <style>
 :root {
-    --navy: #172b4d;
-    --blue: #2864dc;
-    --sky: #edf4ff;
-    --ink: #1c2940;
+    --navy: #1c3023;
+    --blue: #16804a;
+    --sky: #e5f6eb;
+    --ink: #1c3023;
     --muted: #6e7b91;
-    --line: #e5eaf2;
+    --line: #dfe9e1;
     --surface: #fff;
 }
 
 body {
-    background: #f4f7fb;
+    background: #f3f8f4;
     color: var(--ink);
 }
 
@@ -201,7 +201,7 @@ body {
     display: flex;
     align-items: center;
     gap: 14px;
-    box-shadow: 0 5px 18px #1b315008;
+    box-shadow: 0 5px 18px #174b2a0a;
 }
 
 .metric-icon {
@@ -260,24 +260,24 @@ body {
     border: 1px solid var(--line);
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 7px 22px #1b315008;
+    box-shadow: 0 7px 22px #174b2a0a;
     min-width: 0;
 }
 
 .official-cover {
     height: 94px;
-    background: linear-gradient(125deg, #214bb4, #4385f2);
+    background: linear-gradient(125deg, #16804a, #2a9a60);
     position: relative;
     padding: 17px 18px;
     color: #fff;
 }
 
 .official-cover.teal {
-    background: linear-gradient(125deg, #087e8b, #32b8b5);
+    background: linear-gradient(125deg, #16804a, #e87924);
 }
 
 .official-cover.purple {
-    background: linear-gradient(125deg, #5942b5, #9780f5);
+    background: linear-gradient(125deg, #e87924, #f3a34d);
 }
 
 .official-cover.orange {
@@ -289,7 +289,7 @@ body {
 }
 
 .official-cover.green {
-    background: linear-gradient(125deg, #167653, #42b68a);
+    background: linear-gradient(125deg, #17623b, #2a9a60);
 }
 
 .position-tag {
@@ -310,27 +310,27 @@ body {
     width: 65px;
     height: 65px;
     border-radius: 20px;
-    background: #eaf0fb;
+    background: #edf6ef;
     border: 4px solid #fff;
     display: grid;
     place-items: center;
-    color: #284b91;
+    color: #0d5c35;
     font-size: 20px;
     font-weight: 800;
     position: absolute;
     left: 17px;
     bottom: -32px;
-    box-shadow: 0 5px 12px #10264a18;
+    box-shadow: 0 5px 12px #174b2a12;
 }
 
 .avatar.a2 {
-    background: #e3f8f4;
-    color: #087e8b;
+    background: #e5f6eb;
+    color: #16804a;
 }
 
 .avatar.a3 {
-    background: #f0eaff;
-    color: #5942b5;
+    background: #fff0df;
+    color: #e87924;
 }
 
 .avatar.a4 {
@@ -339,13 +339,13 @@ body {
 }
 
 .avatar.a5 {
-    background: #e9eef5;
+    background: #f3f8f4;
     color: #394960;
 }
 
 .avatar.a6 {
     background: #e3f7ed;
-    color: #167653;
+    color: #17623b;
 }
 
 /* Official details */
@@ -383,8 +383,8 @@ body {
     gap: 6px;
     padding: 5px 8px;
     border-radius: 20px;
-    background: #e8f8ef;
-    color: #16814a;
+    background: #e5f6eb;
+    color: #16804a;
     font-weight: 700;
 }
 
@@ -415,8 +415,8 @@ body {
 .placeholder-note {
     margin-top: 20px;
     padding: 14px 16px;
-    background: #edf4ff;
-    border: 1px solid #dbe8ff;
+    background: #e5f6eb;
+    border: 1px solid #e5f6eb;
     color: #52698c;
     border-radius: 12px;
     font-size: 12px;
@@ -448,7 +448,7 @@ body {
     border-radius: 16px;
     padding: 22px;
     margin-bottom: 28px;
-    box-shadow: 0 5px 18px #1b315008;
+    box-shadow: 0 5px 18px #174b2a0a;
 }
 
 .add-official-panel h2 {
@@ -512,8 +512,8 @@ body {
 }
 
 .form-message.success {
-    background: #e8f8ef;
-    color: #16814a;
+    background: #e5f6eb;
+    color: #16804a;
 }
 
 .form-message.error {

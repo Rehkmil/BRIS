@@ -134,7 +134,7 @@ start_page($pageTitle);
 
             <div class="actions" style="justify-content:flex-start">
                 <button type="submit" class="btn primary">Save Resident</button>
-                <a class="btn" style="background:#edf1f7" href="residents.php">Cancel</a>
+                <a class="btn" style="background:#f3f8f4" href="residents.php">Cancel</a>
             </div>
         </form>
     </div>

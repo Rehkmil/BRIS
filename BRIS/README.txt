@@ -61,7 +61,7 @@ INSTALLATION ON XAMPP
 5. Open http://localhost/phpmyadmin/
 6. Select Import, choose BRIS/database/bris.sql, then click Import/Go. The SQL creates bris_db, the tables, and sample records.
 7. If you already imported an older BRIS database, import BRIS/database/add_login_system.sql into that database to add the users table. This migration does not delete resident data.
-8. Open http://localhost/BRIS/setup_staff.php and create the first staff account using your own credentials.
+8. Open http://localhost/BRIS/setup_staff.php and create the first staff account using your own credentials. This page is locked after the first staff account exists.
 9. Open http://localhost/BRIS/login.php to log in. Standard users can create an account at http://localhost/BRIS/register.php. Staff can create more user/staff accounts in Accounts.
 
 DATABASE SETTINGS

@@ -59,20 +59,20 @@ if ($is_staff) {
             <svg viewBox="0 0 520 170" width="min(100%,430px)" style="margin-top:26px"
                  role="img" aria-label="Barangay hall illustration">
                 <!-- Ground shadow -->
-                <ellipse cx="260" cy="160" rx="210" ry="9" fill="#12377f" opacity=".3"/>
+                <ellipse cx="260" cy="160" rx="210" ry="9" fill="#0d5c35" opacity=".3"/>
                 <!-- Roof -->
-                <path d="M90 90 260 15 430 90Z" fill="#f3f7ff"/>
+                <path d="M90 90 260 15 430 90Z" fill="#f3f8f4"/>
                 <!-- Building body -->
                 <rect x="120" y="89" width="280" height="72" rx="4" fill="#fff"/>
                 <!-- Windows -->
                 <path d="M155 110h24v35h-24
                          m42-35h24v35h-24
                          m102-35h24v35h-24
-                         m42-35h24v35h-24" fill="#c8dcff"/>
+                         m42-35h24v35h-24" fill="#d8f0df"/>
                 <!-- Door -->
-                <rect x="242" y="124" width="36" height="37" fill="#2463eb"/>
+                <rect x="242" y="124" width="36" height="37" fill="#16804a"/>
                 <!-- Clock tower / sign -->
-                <rect x="244" y="48" width="32" height="27" rx="3" fill="#2463eb"/>
+                <rect x="244" y="48" width="32" height="27" rx="3" fill="#16804a"/>
                 <path d="M260 52v19m-9-10h18" stroke="white" stroke-width="3"/>
             </svg>
         </div>
