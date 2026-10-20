@@ -117,9 +117,25 @@ start_page('Residents');
                                         <?= e($resident['status'] ?? 'Unknown') ?>
                                     </span>
                                 </td>
-                                <td class="no-print">
-                                    <a href="resident_form.php?id=<?= (int) $resident['id'] ?>">Edit</a>
-                                </td>
+                                
+<td class="no-print">
+    <a href="resident_form.php?id=<?= (int) $resident['id'] ?>">Edit</a>
+
+    <form method="post"
+          action="resident_delete.php"
+          style="display:inline"
+          onsubmit="return confirm('Are you sure you want to delete this resident? This action may not be reversible.');">
+
+        <input type="hidden" name="csrf" value="<?= e(token()) ?>">
+        <input type="hidden" name="resident_id" value="<?= (int) $resident['id'] ?>">
+
+        <button type="submit" class="btn"
+                style="background:#fee2e2;color:#991b1b;padding:6px 10px;">
+            Delete
+        </button>
+    </form>
+</td>
+
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

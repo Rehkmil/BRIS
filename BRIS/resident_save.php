@@ -28,6 +28,7 @@ $status = $_POST['status'] ?? 'Active';
 // 4. Validate input
 $allowedStatuses = ['Active', 'Inactive', 'Moved', 'Deceased'];
 
+
 if (
     $first === '' ||
     $last === '' ||
@@ -40,6 +41,47 @@ if (
     exit;
 }
 
+if (
+    $phone !== null &&
+    (
+        !preg_match('/^[0-9+\-() ]+$/', $phone) ||
+        strlen(preg_replace('/\D/', '', $phone)) < 7 ||
+        strlen(preg_replace('/\D/', '', $phone)) > 15
+    )
+) {
+    flash('Enter a valid phone number using 7–15 digits. You may use +, spaces, hyphens, or parentheses.', 'danger');
+    header('Location: ' . ($id > 0 ? 'resident_form.php?id=' . $id : 'resident_form.php'));
+    exit;
+}
+
+// NEW: Check whether another resident already uses this email.
+if ($email !== null) {
+    $checkEmail = $pdo->prepare(
+        'SELECT id FROM residents WHERE email = ? AND id != ? LIMIT 1'
+    );
+    $checkEmail->execute([$email, $id]);
+
+    if ($checkEmail->fetch(PDO::FETCH_ASSOC)) {
+        flash('This email address is already assigned to another resident.', 'danger');
+        header('Location: ' . ($id > 0 ? 'resident_form.php?id=' . $id : 'resident_form.php'));
+        exit;
+    }
+}
+
+if ($house !== null) {
+    $checkHouse = $pdo->prepare(
+        'SELECT id FROM households WHERE id = ? LIMIT 1'
+    );
+    $checkHouse->execute([$house]);
+
+    if (!$checkHouse->fetch(PDO::FETCH_ASSOC)) {
+        flash('The selected household does not exist. Please select a valid household.', 'danger');
+        header('Location: ' . ($id > 0 ? 'resident_form.php?id=' . $id : 'resident_form.php'));
+        exit;
+    }
+}
+
+try {
 // 5. Update or register resident
 if ($id > 0) {
     $sql = '
@@ -72,6 +114,14 @@ if ($id > 0) {
 
     flash('Resident registered successfully.');
 }
+} catch (PDOException $exception) {
+    error_log('Resident save failed: ' . $exception->getMessage());
+
+    flash('Unable to save the resident record. Please check the information and try again.', 'danger');
+    header('Location: ' . ($id > 0 ? 'resident_form.php?id=' . $id : 'resident_form.php'));
+    exit;
+}
+
 
 // 6. Return to resident list
 header('Location: residents.php');

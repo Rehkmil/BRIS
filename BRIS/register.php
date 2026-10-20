@@ -1,4 +1,4 @@
-<?php
+ <?php
 require_once 'config/functions.php';
 require_once 'config/database.php';
 
@@ -97,13 +97,21 @@ function register_household_id(PDO $pdo, array $v): int
 /** Validates the optional fields, inserts the resident, and returns the resident id. */
 function register_insert_resident(PDO $pdo, array $v, int $householdId): int
 {
-    $birthDate = register_null_if_empty($v['birth_date']);
-    if ($birthDate !== null) {
-        $date = DateTime::createFromFormat('Y-m-d', $birthDate);
-        if (!$date || $date->format('Y-m-d') !== $birthDate) {
-            throw new RuntimeException('Enter a valid birth date.');
-        }
+    
+$birthDate = register_null_if_empty($v['birth_date']);
+
+if ($birthDate !== null) {
+    $date = DateTime::createFromFormat('!Y-m-d', $birthDate);
+    $today = new DateTimeImmutable('today');
+
+    if (
+        !$date ||
+        $date->format('Y-m-d') !== $birthDate ||
+        $date > $today
+    ) {
+        throw new RuntimeException('Enter a valid birth date that is not in the future.');
     }
+}
 
     $sex    = in_array($v['sex'], REGISTER_SEX_OPTIONS, true) ? $v['sex'] : null;
     $phone  = register_null_if_empty($v['phone']);
