@@ -1,14 +1,15 @@
+
 <?php
 require_once 'config/functions.php';
 require_once 'config/database.php';
-require_role('staff');
 
-// Start a session if one has not already been started.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Create a form security token.
+require_role('staff');
+
+// Create a CSRF security token.
 if (empty($_SESSION['officials_csrf_token'])) {
     $_SESSION['officials_csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -16,20 +17,45 @@ if (empty($_SESSION['officials_csrf_token'])) {
 $message = '';
 $messageType = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_official'])) {
+// Validate a date in YYYY-MM-DD format.
+$isValidDate = static function ($date) {
+    if ($date === '') {
+        return true;
+    }
+
+    $dateObject = DateTime::createFromFormat('!Y-m-d', $date);
+
+    return $dateObject !== false
+        && $dateObject->format('Y-m-d') === $date;
+};
+
+// Handle adding or editing an official.
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && (
+        isset($_POST['add_official'])
+        || isset($_POST['update_official'])
+    )
+) {
     $token = $_POST['csrf_token'] ?? '';
 
     if (
-        !is_string($token) ||
-        !hash_equals($_SESSION['officials_csrf_token'], $token)
+        !is_string($token)
+        || !hash_equals($_SESSION['officials_csrf_token'], $token)
     ) {
         $message = 'Invalid form submission. Please refresh and try again.';
         $messageType = 'error';
     } else {
         $fullName = trim($_POST['full_name'] ?? '');
         $position = trim($_POST['position'] ?? '');
-        $termStart = $_POST['term_start'] ?? '';
-        $termEnd = $_POST['term_end'] ?? '';
+        $termStart = trim($_POST['term_start'] ?? '');
+        $termEnd = trim($_POST['term_end'] ?? '');
+
+        $isEditing = isset($_POST['update_official']);
+        $officialId = filter_var(
+            $_POST['official_id'] ?? null,
+            FILTER_VALIDATE_INT
+        );
 
         $allowedPositions = [
             'Barangay Captain',
@@ -42,43 +68,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_official'])) {
         if ($fullName === '' || mb_strlen($fullName) > 160) {
             $message = 'Please enter a name with no more than 160 characters.';
             $messageType = 'error';
+
         } elseif (!in_array($position, $allowedPositions, true)) {
             $message = 'Please select a valid official position.';
             $messageType = 'error';
-        } elseif (
-            ($termStart !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $termStart)) ||
-            ($termEnd !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $termEnd))
-        ) {
+
+        } elseif (!$isValidDate($termStart) || !$isValidDate($termEnd)) {
             $message = 'Please enter valid term dates.';
             $messageType = 'error';
+
         } elseif (
-            $termStart !== '' &&
-            $termEnd !== '' &&
-            $termEnd < $termStart
+            $termStart !== ''
+            && $termEnd !== ''
+            && $termEnd < $termStart
         ) {
             $message = 'The term end date cannot be before the start date.';
             $messageType = 'error';
+
         } else {
             try {
-                $stmt = $pdo->prepare("
-                    INSERT INTO barangay_officials
-                        (full_name, position, term_start, term_end, status)
-                    VALUES (?, ?, ?, ?, 'Active')
-                ");
+                if ($isEditing) {
+                    if (!$officialId || $officialId < 1) {
+                        throw new InvalidArgumentException(
+                            'Invalid official ID.'
+                        );
+                    }
 
-                $stmt->execute([
-                    $fullName,
-                    $position,
-                    $termStart !== '' ? $termStart : null,
-                    $termEnd !== '' ? $termEnd : null
-                ]);
+                    // Make sure the official exists before updating.
+                    $check = $pdo->prepare(
+                        'SELECT id FROM barangay_officials WHERE id = ? LIMIT 1'
+                    );
+                    $check->execute([$officialId]);
 
-                $message = 'Official added successfully!';
+                    if (!$check->fetchColumn()) {
+                        throw new InvalidArgumentException(
+                            'Official not found.'
+                        );
+                    }
+
+                    $stmt = $pdo->prepare("
+                        UPDATE barangay_officials
+                        SET full_name = ?,
+                            position = ?,
+                            term_start = ?,
+                            term_end = ?
+                        WHERE id = ?
+                    ");
+
+                    $stmt->execute([
+                        $fullName,
+                        $position,
+                        $termStart !== '' ? $termStart : null,
+                        $termEnd !== '' ? $termEnd : null,
+                        $officialId
+                    ]);
+
+                    $message = 'Official updated successfully!';
+
+                } else {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO barangay_officials
+                            (full_name, position, term_start, term_end, status)
+                        VALUES (?, ?, ?, ?, 'Active')
+                    ");
+
+                    $stmt->execute([
+                        $fullName,
+                        $position,
+                        $termStart !== '' ? $termStart : null,
+                        $termEnd !== '' ? $termEnd : null
+                    ]);
+
+                    $message = 'Official added successfully!';
+                }
+
                 $messageType = 'success';
 
-                // Prevent accidental duplicate submissions.
+                // Use a fresh token after a successful submission.
                 $_SESSION['officials_csrf_token'] = bin2hex(random_bytes(32));
+
+            } catch (InvalidArgumentException $exception) {
+                $message = 'The selected official could not be found. Please try again.';
+                $messageType = 'error';
+
             } catch (PDOException $exception) {
+                error_log('Official save failed: ' . $exception->getMessage());
                 $message = 'Unable to save the official. Please try again.';
                 $messageType = 'error';
             }
@@ -86,7 +160,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_official'])) {
     }
 }
 
-// Get officials from the database.
+// Load the official being edited, if an edit ID is provided.
+$editOfficial = null;
+
+if (isset($_GET['edit'])) {
+    $editId = filter_var($_GET['edit'], FILTER_VALIDATE_INT);
+
+    if ($editId && $editId > 0) {
+        $stmt = $pdo->prepare("
+            SELECT id, full_name, position, term_start, term_end
+            FROM barangay_officials
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$editId]);
+        $editOfficial = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$editOfficial) {
+            $message = 'Official not found.';
+            $messageType = 'error';
+        }
+    } else {
+        $message = 'Invalid official ID.';
+        $messageType = 'error';
+    }
+}
+
+// Get the officials directory.
 $officials = $pdo->query("
     SELECT id, full_name, position, status, term_start, term_end
     FROM barangay_officials
@@ -95,10 +196,12 @@ $officials = $pdo->query("
             WHEN 'Barangay Captain' THEN 1
             WHEN 'Kagawad' THEN 2
             WHEN 'SK Chairperson' THEN 3
-            ELSE 4
+            WHEN 'Secretary' THEN 4
+            WHEN 'Treasurer' THEN 5
+            ELSE 6
         END,
         full_name ASC
-")->fetchAll();
+")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get dashboard counts.
 $residentCount = (int) $pdo->query(
@@ -124,7 +227,6 @@ start_page('Barangay Officials');
     --ink: #1c3023;
     --muted: #6e7b91;
     --line: #dfe9e1;
-    --surface: #fff;
 }
 
 body {
@@ -132,7 +234,6 @@ body {
     color: var(--ink);
 }
 
-/* Main layout - no sidebar */
 .dashboard-shell {
     display: block;
     min-height: calc(100vh - 70px);
@@ -146,7 +247,6 @@ body {
     margin: 0 auto;
 }
 
-/* Dashboard header */
 .dash-top {
     display: flex;
     justify-content: space-between;
@@ -169,23 +269,13 @@ body {
     letter-spacing: -.7px;
 }
 
-.dash-top p {
+.dash-top p,
+.section-head p {
     color: var(--muted);
-    margin: 0;
+    margin: 5px 0 0;
     font-size: 13px;
 }
 
-.date-pill {
-    background: #fff;
-    border: 1px solid var(--line);
-    padding: 10px 14px;
-    border-radius: 12px;
-    color: #52617a;
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-/* Dashboard metrics */
 .metric-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -202,18 +292,19 @@ body {
     align-items: center;
     gap: 14px;
     box-shadow: 0 5px 18px #174b2a0a;
+    min-width: 0;
 }
 
 .metric-icon {
     height: 45px;
     width: 45px;
+    flex-shrink: 0;
     border-radius: 13px;
     background: var(--sky);
     color: var(--blue);
     display: grid;
     place-items: center;
     font-size: 21px;
-    flex-shrink: 0;
 }
 
 .metric span {
@@ -228,7 +319,6 @@ body {
     line-height: 1.4;
 }
 
-/* Section heading */
 .section-head {
     display: flex;
     justify-content: space-between;
@@ -243,12 +333,9 @@ body {
 }
 
 .section-head p {
-    margin: 5px 0 0;
-    color: var(--muted);
     font-size: 12px;
 }
 
-/* Officials cards */
 .official-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -305,10 +392,10 @@ body {
     font-weight: 650;
 }
 
-/* Official avatars */
 .avatar {
     width: 65px;
     height: 65px;
+    box-sizing: border-box;
     border-radius: 20px;
     background: #edf6ef;
     border: 4px solid #fff;
@@ -323,32 +410,12 @@ body {
     box-shadow: 0 5px 12px #174b2a12;
 }
 
-.avatar.a2 {
-    background: #e5f6eb;
-    color: #16804a;
-}
+.avatar.a2 { background: #e5f6eb; color: #16804a; }
+.avatar.a3 { background: #fff0df; color: #e87924; }
+.avatar.a4 { background: #fff0e2; color: #b75b23; }
+.avatar.a5 { background: #f3f8f4; color: #394960; }
+.avatar.a6 { background: #e3f7ed; color: #17623b; }
 
-.avatar.a3 {
-    background: #fff0df;
-    color: #e87924;
-}
-
-.avatar.a4 {
-    background: #fff0e2;
-    color: #b75b23;
-}
-
-.avatar.a5 {
-    background: #f3f8f4;
-    color: #394960;
-}
-
-.avatar.a6 {
-    background: #e3f7ed;
-    color: #17623b;
-}
-
-/* Official details */
 .official-body {
     padding: 42px 17px 17px;
 }
@@ -357,6 +424,7 @@ body {
     font-size: 15px;
     font-weight: 750;
     margin: 0 0 4px;
+    overflow-wrap: anywhere;
 }
 
 .official-term {
@@ -369,6 +437,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     padding-top: 13px;
     border-top: 1px solid var(--line);
@@ -376,7 +445,6 @@ body {
     color: var(--muted);
 }
 
-/* Official status */
 .status-chip {
     display: inline-flex;
     align-items: center;
@@ -392,6 +460,7 @@ body {
     content: '';
     width: 6px;
     height: 6px;
+    flex-shrink: 0;
     border-radius: 50%;
     background: #20a464;
 }
@@ -411,18 +480,10 @@ body {
     text-decoration: none;
 }
 
-/* Information note */
-.placeholder-note {
-    margin-top: 20px;
-    padding: 14px 16px;
-    background: #e5f6eb;
-    border: 1px solid #e5f6eb;
-    color: #52698c;
-    border-radius: 12px;
-    font-size: 12px;
+.view-link:hover {
+    text-decoration: underline;
 }
 
-/* Quick links */
 .quick-links {
     display: flex;
     gap: 8px;
@@ -440,8 +501,6 @@ body {
     font-weight: 650;
 }
 
-
-/* Add official form */
 .add-official-panel {
     background: #fff;
     border: 1px solid var(--line);
@@ -456,7 +515,7 @@ body {
     font-size: 18px;
 }
 
-.add-official-panel p {
+.add-official-panel > p {
     margin: 0 0 18px;
     color: var(--muted);
     font-size: 13px;
@@ -472,6 +531,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 7px;
+    min-width: 0;
 }
 
 .official-form label {
@@ -488,10 +548,15 @@ body {
     border-radius: 9px;
     font: inherit;
     background: #fff;
+    color: var(--ink);
 }
 
 .official-form .full-width {
     grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .official-form button {
@@ -502,6 +567,20 @@ body {
     color: #fff;
     font-weight: 700;
     cursor: pointer;
+}
+
+.official-form button:hover {
+    background: #10683b;
+}
+
+.cancel-link {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.cancel-link:hover {
+    text-decoration: underline;
 }
 
 .form-message {
@@ -521,18 +600,16 @@ body {
     color: #b54735;
 }
 
-@media (max-width: 680px) {
-    .official-form {
-        grid-template-columns: 1fr;
-    }
-
-    .official-form .full-width {
-        grid-column: auto;
-    }
+.empty-state {
+    grid-column: 1 / -1;
+    padding: 28px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    color: var(--muted);
 }
 
-
-/* Tablet layout */
 @media (max-width: 1000px) {
     .official-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -542,41 +619,30 @@ body {
         padding: 22px;
     }
 
-    .metric-grid {
-        gap: 9px;
-    }
-
     .metric {
         padding: 13px;
     }
 }
 
-/* Mobile layout */
 @media (max-width: 680px) {
     .dashboard-main {
         padding: 18px 13px;
     }
 
-    .dash-top {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .date-pill {
-        white-space: normal;
-    }
-
-    .metric-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .official-grid {
-        grid-template-columns: 1fr;
-    }
-
+    .dash-top,
     .section-head {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .metric-grid,
+    .official-grid,
+    .official-form {
+        grid-template-columns: 1fr;
+    }
+
+    .official-form .full-width {
+        grid-column: auto;
     }
 }
 </style>
@@ -584,84 +650,128 @@ body {
 <div class="dashboard-shell">
     <main class="dashboard-main">
 
-        <!-- Page header -->
         <div class="dash-top">
             <div>
                 <div class="eyebrow">Barangay directory</div>
                 <h1>Meet your local officials</h1>
                 <p>A simple overview of the people serving your community.</p>
             </div>
-
-            <div class="date-pill">
-                ● Demo workspace &nbsp; / &nbsp; Placeholder data
-            </div>
         </div>
 
-        
-<!-- Add Official Form -->
-<section class="add-official-panel">
-    <h2>Add a Barangay Official</h2>
-    <p>Enter the official's details to add them to the directory.</p>
+        <!-- Add or edit official form -->
+        <section class="add-official-panel">
+            <h2>
+                <?= $editOfficial ? 'Edit Barangay Official' : 'Add a Barangay Official' ?>
+            </h2>
 
-    <?php if ($message !== ''): ?>
-        <div class="form-message <?= e($messageType) ?>">
-            <?= e($message) ?>
-        </div>
-    <?php endif; ?>
+            <p>
+                <?= $editOfficial
+                    ? 'Update the official’s details below.'
+                    : 'Enter the official’s details to add them to the directory.' ?>
+            </p>
 
-    <form method="POST" class="official-form">
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="<?= e($_SESSION['officials_csrf_token']) ?>"
-        >
+            <?php if ($message !== ''): ?>
+                <div class="form-message <?= e($messageType) ?>">
+                    <?= e($message) ?>
+                </div>
+            <?php endif; ?>
 
-        <div class="form-field">
-            <label for="full_name">Full Name</label>
-            <input
-                type="text"
-                id="full_name"
-                name="full_name"
-                maxlength="160"
-                required
-                placeholder="Enter the official's full name"
-            >
-        </div>
+            <form method="POST" class="official-form">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($_SESSION['officials_csrf_token']) ?>"
+                >
 
-        <div class="form-field">
-            <label for="position">Position</label>
-            <select id="position" name="position" required>
-                <option value="">Select a position</option>
-                <option value="Barangay Captain">Barangay Captain</option>
-                <option value="Kagawad">Kagawad</option>
-                <option value="SK Chairperson">SK Chairperson</option>
-                <option value="Secretary">Secretary</option>
-                <option value="Treasurer">Treasurer</option>
-            </select>
-        </div>
+                <?php if ($editOfficial): ?>
+                    <input
+                        type="hidden"
+                        name="official_id"
+                        value="<?= (int) $editOfficial['id'] ?>"
+                    >
+                <?php endif; ?>
 
-        <div class="form-field">
-            <label for="term_start">Term Start (optional)</label>
-            <input type="date" id="term_start" name="term_start">
-        </div>
+                <div class="form-field">
+                    <label for="full_name">Full Name</label>
+                    <input
+                        type="text"
+                        id="full_name"
+                        name="full_name"
+                        maxlength="160"
+                        required
+                        placeholder="Enter the official's full name"
+                        value="<?= e($editOfficial['full_name'] ?? '') ?>"
+                    >
+                </div>
 
-        <div class="form-field">
-            <label for="term_end">Term End (optional)</label>
-            <input type="date" id="term_end" name="term_end">
-        </div>
+                <div class="form-field">
+                    <label for="position">Position</label>
+                    <select id="position" name="position" required>
+                        <option value="">Select a position</option>
 
-        <div class="full-width">
-            <button type="submit" name="add_official" value="1">
-                + Add Official
-            </button>
-        </div>
-    </form>
-</section>
+                        <?php
+                        $positions = [
+                            'Barangay Captain',
+                            'Kagawad',
+                            'SK Chairperson',
+                            'Secretary',
+                            'Treasurer'
+                        ];
+                        ?>
 
+                        <?php foreach ($positions as $positionOption): ?>
+                            <option
+                                value="<?= e($positionOption) ?>"
+                                <?= ($editOfficial['position'] ?? '') === $positionOption
+                                    ? 'selected'
+                                    : '' ?>
+                            >
+                                <?= e($positionOption) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="term_start">Term Start (optional)</label>
+                    <input
+                        type="date"
+                        id="term_start"
+                        name="term_start"
+                        value="<?= e($editOfficial['term_start'] ?? '') ?>"
+                    >
+                </div>
+
+                <div class="form-field">
+                    <label for="term_end">Term End (optional)</label>
+                    <input
+                        type="date"
+                        id="term_end"
+                        name="term_end"
+                        value="<?= e($editOfficial['term_end'] ?? '') ?>"
+                    >
+                </div>
+
+                <div class="full-width">
+                    <button
+                        type="submit"
+                        name="<?= $editOfficial ? 'update_official' : 'add_official' ?>"
+                        value="1"
+                    >
+                        <?= $editOfficial ? 'Save Changes' : '+ Add Official' ?>
+                    </button>
+
+                    <?php if ($editOfficial): ?>
+                        <a class="cancel-link" href="officials.php">
+                            Cancel Editing
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </section>
 
         <!-- Summary cards -->
         <div class="metric-grid">
-
             <div class="metric">
                 <div class="metric-icon">♙</div>
                 <div>
@@ -685,16 +795,13 @@ body {
                     <strong><?= number_format($householdCount) ?></strong>
                 </div>
             </div>
-
         </div>
 
-        <!-- Officials directory heading -->
+        <!-- Directory heading -->
         <div class="section-head">
             <div>
                 <h2>Official directory</h2>
-                <p>
-                    View the registered barangay officials and their current terms
-                </p>
+                <p>View registered barangay officials and their current terms.</p>
             </div>
 
             <div class="quick-links">
@@ -703,100 +810,97 @@ body {
             </div>
         </div>
 
-        <!-- Officials cards -->
+        <!-- Official cards -->
         <div class="official-grid">
+            <?php if (empty($officials)): ?>
+                <div class="empty-state">
+                    No barangay officials have been added yet.
+                    Use the form above to add the first official.
+                </div>
+            <?php else: ?>
 
-            <?php
-            $colors = ['', 'teal', 'purple', 'orange', 'slate', 'green'];
-            $avatars = ['', 'a2', 'a3', 'a4', 'a5', 'a6'];
+                <?php
+                $colors = ['', 'teal', 'purple', 'orange', 'slate', 'green'];
+                $avatars = ['', 'a2', 'a3', 'a4', 'a5', 'a6'];
+                ?>
 
-            foreach ($officials as $i => $official):
+                <?php foreach ($officials as $i => $official): ?>
+                    <?php
+                    $name = trim($official['full_name'] ?? 'Official');
+                    $parts = preg_split('/\s+/', $name);
 
-                $name = trim($official['full_name'] ?? 'Official Placeholder');
-                $parts = preg_split('/\s+/', $name);
+                    $initials = strtoupper(
+                        substr($parts[0] ?? 'O', 0, 1)
+                        . (isset($parts[1]) ? substr($parts[1], 0, 1) : '')
+                    );
 
-                $initials = strtoupper(
-                    substr($parts[0] ?? 'O', 0, 1) .
-                    (isset($parts[1]) ? substr($parts[1], 0, 1) : '')
-                );
+                    // The term is considered ended the day after its end date.
+                    $termExpired = !empty($official['term_end'])
+                        && $official['term_end'] < date('Y-m-d');
 
-                $active = ($official['status'] ?? 'Active') === 'Active';
+                    $displayStatus = $termExpired
+                        ? 'Term Ended'
+                        : ($official['status'] ?? 'Unknown');
 
-                $term = 'Term dates not set';
+                    $active = !$termExpired
+                        && ($official['status'] ?? '') === 'Active';
 
-                if (
-                    !empty($official['term_start']) ||
-                    !empty($official['term_end'])
-                ) {
-                    $term =
-                        (!empty($official['term_start'])
-                            ? date('M Y', strtotime($official['term_start']))
-                            : '—')
-                        . ' – ' .
-                        (!empty($official['term_end'])
-                            ? date('M Y', strtotime($official['term_end']))
-                            : 'Present');
-                }
-            ?>
+                    $term = 'Term dates not set';
 
-                <article class="official-card">
+                    if (
+                        !empty($official['term_start'])
+                        || !empty($official['term_end'])
+                    ) {
+                        $term =
+                            (!empty($official['term_start'])
+                                ? date('M Y', strtotime($official['term_start']))
+                                : '—')
+                            . ' – '
+                            . (!empty($official['term_end'])
+                                ? date('M Y', strtotime($official['term_end']))
+                                : 'Present');
+                    }
+                    ?>
 
-                    <div class="official-cover <?= $colors[$i % count($colors)] ?>">
+                    <article class="official-card">
+                        <div class="official-cover <?= $colors[$i % count($colors)] ?>">
+                            <div class="position-tag">Community leadership</div>
 
-                        <div class="position-tag">
-                            Community leadership
+                            <h3><?= e($official['position'] ?? 'Official') ?></h3>
+
+                            <div class="avatar <?= $avatars[$i % count($avatars)] ?>">
+                                <?= e($initials) ?>
+                            </div>
                         </div>
 
-                        <h3>
-                            <?= e($official['position'] ?? 'Official') ?>
-                        </h3>
+                        <div class="official-body">
+                            <p class="official-name"><?= e($name) ?></p>
 
-                        <div class="avatar <?= $avatars[$i % count($avatars)] ?>">
-                            <?= e($initials) ?>
+                            <div class="official-term">
+                                <?= e($term) ?>
+                            </div>
+
+                            <div class="official-meta">
+                                <span class="status-chip <?= $active ? '' : 'inactive' ?>">
+                                    <?= e($displayStatus) ?>
+                                </span>
+
+                                <a
+                                    class="view-link"
+                                    href="officials.php?edit=<?= (int) $official['id'] ?>"
+                                    aria-label="Edit <?= e($name) ?>"
+                                >
+                                    Edit Official ↗
+                                </a>
+                            </div>
                         </div>
+                    </article>
+                <?php endforeach; ?>
 
-                    </div>
-
-                    <div class="official-body">
-
-                        <p class="official-name">
-                            <?= e($name) ?>
-                        </p>
-
-                        <div class="official-term">
-                            <?= e($term) ?>
-                        </div>
-
-                        <div class="official-meta">
-
-                            <span class="status-chip <?= $active ? '' : 'inactive' ?>">
-                                <?= e($official['status'] ?? 'Unknown') ?>
-                            </span>
-
-                            <a
-                                class="view-link"
-                                href="residents.php"
-                                aria-label="Browse resident records"
-                            >
-                                Directory ↗
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-            <?php endforeach; ?>
-
+            <?php endif; ?>
         </div>
 
-        <?php if (empty($officials)): ?>
-    <div class="placeholder-note">
-        <strong>No officials added yet.</strong>
-        Use the form above to add your first official.
-    </div>
-<?php endif; ?>
+    </main>
+</div>
 
 <?php end_page(); ?>
-```
