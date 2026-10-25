@@ -12,6 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 verify_token();
 
+$allowedStatuses = ['Active', 'Inactive', 'Moved', 'Deceased'];
+
 // 3. Collect form data
 $id = (int) ($_POST['id'] ?? 0);
 $first = trim($_POST['first_name'] ?? '');
@@ -26,7 +28,33 @@ $house = (int) ($_POST['household_id'] ?? 0) ?: null;
 $status = $_POST['status'] ?? 'Active';
 
 // 4. Validate input
-$allowedStatuses = ['Active', 'Inactive', 'Moved', 'Deceased'];
+/*
+ * Validate birth date.
+ * Accept only real dates in YYYY-MM-DD format.
+ */
+if ($birth !== null) {
+    $date = DateTime::createFromFormat('!Y-m-d', $birth);
+    $dateErrors = DateTime::getLastErrors();
+
+    if (
+        !$date ||
+        ($dateErrors !== false &&
+            ($dateErrors['warning_count'] > 0 ||
+             $dateErrors['error_count'] > 0)) ||
+        $date->format('Y-m-d') !== $birth ||
+        $date > new DateTime('today')
+    ) {
+        flash('Enter a valid birth date that is not in the future.', 'danger');
+
+        header('Location: ' .
+            ($id > 0
+                ? 'resident_form.php?id=' . $id
+                : 'resident_form.php'));
+
+        exit;
+    }
+}
+
 
 
 if (
@@ -54,7 +82,7 @@ if (
     exit;
 }
 
-// NEW: Check whether another resident already uses this email.
+// Check whether another resident already uses this email.
 if ($email !== null) {
     $checkEmail = $pdo->prepare(
         'SELECT id FROM residents WHERE email = ? AND id != ? LIMIT 1'
